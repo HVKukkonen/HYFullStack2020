@@ -17,7 +17,7 @@ function isUniq(objList, name) {
 const Info = (props) => {
     if (props.person.name.toLowerCase().includes(props.filter.toLowerCase())) {
 
-        if (! props.person.name.includes(props.exclude)) {
+        if (props.exclude.indexOf(props.person.name) < 0) {
             return (
                 <p>{props.person.name} {props.person.number} {props.button}</p>
             )
@@ -73,8 +73,12 @@ const Filter = (props) => {
     )
 }
 
-function ButtonFunctionality(name, id) {
+function ButtonFunctionality(name, id, msgHandler, excluder) {
     if (window.confirm('Are you sure you want to remove ' + name)){
+        msgHandler('Contact removed successfully')
+        excluder(name)
+        setTimeout(() => msgHandler(null), 2000)
+        console.log("ButtonFunction id " + id)
         return (
             impList.remove(id)
         )
@@ -84,7 +88,9 @@ function ButtonFunctionality(name, id) {
 const DelButton = (props) => {
     // move to on click not to be run always
         return (
-        <button onClick={() => ButtonFunctionality(props.name, props.id, props.filterfunction)}> remove </button>
+        <button onClick={() =>
+            ButtonFunctionality(props.name, props.id, props.msgHandler, props.exclusionHandler)
+        }> remove </button>
         )
 }
 
@@ -143,6 +149,12 @@ const App = () => {
     // operation message handler
     const [operationMsg, setOperationMsg] = useState(null)
 
+    // client side handler for contact removal
+    const [excludedContact, setExclusion] = useState([])
+
+    const exclHandler = (toExclude) => {
+        setExclusion(excludedContact.concat(toExclude))
+    }
 
     // ----------------------new contact form submission handler------------------------ 
     const submitNewContact = (event) => {
@@ -158,13 +170,17 @@ const App = () => {
 
         // if unique add to contacts details given
         if (isUniq(persons, newName)) {
-            setPersons(persons.concat(listElem))
             setNewName(newName)
             setNewNumber(newNumber)
             console.log('post')
             impList.create(listElem)
-            setOperationMsg('Addition successful!')
-            setTimeout(() => setOperationMsg(null), 5000)
+                .then(
+                    newContact =>{
+                    setPersons(persons.concat(newContact.data))
+                    setOperationMsg('Addition successful!')
+                    setTimeout(() => setOperationMsg(null), 2000)
+                    }
+                )
         } else {
             alert(newName + ' is not unique')
         }
@@ -190,13 +206,19 @@ const App = () => {
             {SuccAlert(operationMsg)}
 
             <h2>Numbers</h2>
+            {console.log("persons ", persons)}
             {persons.map(person =>
                 <Info
                     key={person.name}
                     person={person}
-                    exclude="xt"
                     filter={nameFilter}
-                    button={<DelButton name={person.name} id={person.id} />}
+                    button={<DelButton
+                        name={person.name}
+                        id={person.id}
+                        msgHandler={setOperationMsg}
+                        exclusionHandler={exclHandler}
+                        />}
+                    exclude={excludedContact}
                 />
             )}
 
