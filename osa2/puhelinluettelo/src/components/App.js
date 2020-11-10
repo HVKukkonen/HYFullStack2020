@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import impList from '../services/persons'
+import impList from '../services/persons'  // list of axios operations
 import '../index.css'
 
 
@@ -21,13 +21,13 @@ const Info = (props) => {
             return (
                 <p>{props.person.name} {props.person.number} {props.button}</p>
             )
-            } else {
-                return(null)
-            }
-
         } else {
             return (null)
         }
+
+    } else {
+        return (null)
+    }
 }
 
 // ------------- form to submit contact details------------------------
@@ -74,7 +74,7 @@ const Filter = (props) => {
 }
 
 function ButtonFunctionality(name, id, msgHandler, excluder) {
-    if (window.confirm('Are you sure you want to remove ' + name)){
+    if (window.confirm('Are you sure you want to remove ' + name)) {
         msgHandler('Contact removed successfully')
         excluder(name)
         setTimeout(() => msgHandler(null), 2000)
@@ -87,23 +87,23 @@ function ButtonFunctionality(name, id, msgHandler, excluder) {
 
 const DelButton = (props) => {
     // move to on click not to be run always
-        return (
+    return (
         <button onClick={() =>
             ButtonFunctionality(props.name, props.id, props.msgHandler, props.exclusionHandler)
         }> remove </button>
-        )
+    )
 }
 
 // custom success alert
 const SuccAlert = (msg) => {
-    if (msg !== null){
-        return(
-        <div className='succAlertMsg'>
-            {msg}
-        </div>
+    if (msg !== null) {
+        return (
+            <div className='succAlertMsg'>
+                {msg}
+            </div>
         )
     } else {
-        return(null)
+        return (null)
     }
 }
 
@@ -116,11 +116,11 @@ const App = () => {
     useEffect(() => {
         console.log('effect')
         impList.getAll()
-          .then(response => {
-            console.log('promise fulfilled')
-            setPersons(response.data)
-          })
-      }, [])
+            .then(response => {
+                console.log('promise fulfilled')
+                setPersons(response.data)
+            })
+    }, [])
 
     // -------------------name handler---------------------------------
     const [newName, setNewName] = useState('')  // reset state
@@ -175,14 +175,29 @@ const App = () => {
             console.log('post')
             impList.create(listElem)
                 .then(
-                    newContact =>{
-                    setPersons(persons.concat(newContact.data))
-                    setOperationMsg('Addition successful!')
-                    setTimeout(() => setOperationMsg(null), 2000)
+                    newContact => {
+                        setPersons(persons.concat(newContact.data))
+                        setOperationMsg('Addition successful!')
+                        setTimeout(() => setOperationMsg(null), 2000)
                     }
                 )
         } else {
-            alert(newName + ' is not unique')
+            if (window.confirm(newName + ' is not unique. Do you want to update with the number given?')) {
+                impList
+                    .update(persons.find(person => person.name === newName).id, listElem)
+                    // update persons on screen
+                    .then(updatedPerson => {
+                        setPersons(
+                            persons.map(person => {
+                                if (person.name === newName) {
+                                    return updatedPerson.data
+                                } else {
+                                    return person
+                                }
+                            })
+                        )
+                    })
+            }
         }
     }
 
@@ -217,7 +232,7 @@ const App = () => {
                         id={person.id}
                         msgHandler={setOperationMsg}
                         exclusionHandler={exclHandler}
-                        />}
+                    />}
                     exclude={excludedContact}
                 />
             )}
