@@ -1,28 +1,64 @@
 // TITLE: controller for blogs routing
 
+const jwt = require('jsonwebtoken');
 // create router object
 const blogsRouter = require('express').Router();
+// const { response } = require('express');
+// const { request } = require('../app');
 // import Blog from models
 const Blog = require('../models/blog');
-// const User = require('../models/user')
-// const config = require('../utils/config')
+const User = require('../models/user');
 
-blogsRouter.get('/', (request, response) => {
-  Blog
-    .find({})
-    .then((blogs) => {
-      response.json(blogs);
-    });
+// helper function to get access token
+const getTokenFrom = (request) => {
+  const authorization = request.get('authorization');
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    return authorization.substring(7);
+  }
+  return null;
+};
+
+blogsRouter.get('/', async (request, response) => {
+  const blogs = await Blog.find({}).populate('user');
+  response.json(blogs.map((blog) => blog.toJSON()));
 });
 
-blogsRouter.post('/', (request, response) => {
-  const blog = new Blog(request.body);
+blogsRouter.post('/', async (request, response, next) => {
+  const token = getTokenFrom(request);
+  const decodedToken = jwt.verify(token, process.env.SECRET);
+  if (!token || !decodedToken.id) {
+    return response.status(401).json({ error: 'token missing or invalid' });
+  }
+  const user = await User.findById(decodedToken.id);
 
-  blog
-    .save()
-    .then((result) => {
-      response.status(201).json(result);
-    });
+  const blog = new Blog(request.body);
+  blog.user = user;
+
+  // link an arbitrary user's id to input blog
+  // blog.user = User.findOne({}).id;
+  // console.log('blog at post', blog);
+  // console.log('user at post', User.find({}));
+
+  // insert 0 for non-existing likes
+  if (!blog.likes) { blog.likes = 0; }
+
+  // await ... returns promise value not promise
+  try {
+    const savedBlog = await blog.save();
+    response.status(201).json(savedBlog);
+  } catch (exception) {
+    // console.log('following error catched at post', exception.name);
+    next(exception);
+  }
+});
+
+blogsRouter.delete('/:id', async (request, response, next) => {
+  try {
+    await Blog.findByIdAndRemove(request.params.id);
+    response.status(204).end();
+  } catch (exception) {
+    next(exception);
+  }
 });
 
 // export the defined router
