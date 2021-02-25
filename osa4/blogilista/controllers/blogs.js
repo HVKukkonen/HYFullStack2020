@@ -27,7 +27,7 @@ blogsRouter.post('/', async (request, response, next) => {
   const token = getTokenFrom(request);
   const decodedToken = jwt.verify(token, process.env.SECRET);
   if (!token || !decodedToken.id) {
-    return response.status(401).json({ error: 'token missing or invalid' });
+    return response.status(401).json({ error: 'invalid' });
   }
   const user = await User.findById(decodedToken.id);
 
@@ -52,10 +52,43 @@ blogsRouter.post('/', async (request, response, next) => {
   }
 });
 
+// delete one
 blogsRouter.delete('/:id', async (request, response, next) => {
   try {
     await Blog.findByIdAndRemove(request.params.id);
     response.status(204).end();
+  } catch (exception) {
+    next(exception);
+  }
+});
+
+blogsRouter.delete('/', async (request, response, next) => {
+  try {
+    await Blog.deleteMany({});
+    response.status(200).end();
+  } catch (exception) {
+    next(exception);
+  }
+});
+
+blogsRouter.put('/:id', async (request, response, next) => {
+  const blog = {
+    title: request.body.title,
+    author: request.body.author,
+    url: request.body.url,
+    likes: request.body.likes,
+    user: request.body.user.id,
+  };
+
+  // const blog = Blog(request.body);
+  // // dont overwrite existing mongoose id
+  // delete blog._id;
+
+  try {
+    const updated = await Blog.findByIdAndUpdate(
+      request.params.id, blog, { new: true, omitUndefined: true },
+    );
+    response.json(updated).status(204).end();
   } catch (exception) {
     next(exception);
   }
